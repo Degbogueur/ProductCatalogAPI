@@ -32,5 +32,14 @@ namespace ProductCatalog.Mappers
                 Description = createCategoryDto.Description
             };
         }
+
+        public static Category ToCategory(this UpdateCategoryDto updateCategoryDto)
+        {
+            return new Category
+            {
+                Name = updateCategoryDto.Name,
+                Description = updateCategoryDto.Description
+            };
+        }
     }
 }

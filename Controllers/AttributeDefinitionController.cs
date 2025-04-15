@@ -1,10 +1,9 @@
 ﻿using Humanizer;
 using Microsoft.AspNetCore.Mvc;
-using ProductCatalog.Data.Contexts;
 using ProductCatalog.DTOs.AttributeDefinition;
 using ProductCatalog.Helpers.Enums;
+using ProductCatalog.Interfaces.Repositories;
 using ProductCatalog.Mappers;
-using ProductCatalog.Models;
 
 namespace ProductCatalog.Controllers
 {
@@ -12,75 +11,75 @@ namespace ProductCatalog.Controllers
     [ApiController]
     public class AttributeDefinitionController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IAttributeDefinitionRepository _attributeDefinitionRepository;
 
-        public AttributeDefinitionController(ApplicationDbContext context)
+        public AttributeDefinitionController(IAttributeDefinitionRepository attributeDefinitionRepository)
         {
-            this._context = context;
+            this._attributeDefinitionRepository = attributeDefinitionRepository;
         }
 
         [HttpGet]
-        public IActionResult GetAttributeDefinitions()
+        public async Task<IActionResult> GetAttributeDefinitions()
         {
-            var attributeDefinitions = _context.AttributeDefinitions.Select(a => a.ToAttributeDefinitionDto()).ToList();
-            return Ok(attributeDefinitions);
+            var attributeDefinitions = await _attributeDefinitionRepository.GetAsync();
+            var attributeDefinitionDtos = attributeDefinitions.Select(a => a.ToAttributeDefinitionDto()).ToList();
+            return Ok(attributeDefinitionDtos);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetAttributeDefinition(int id)
+        public async Task<IActionResult> GetAttributeDefinition(int id)
         {
-            var attributeDefinition = _context.AttributeDefinitions.Find(id);
+            var attributeDefinition = await _attributeDefinitionRepository.GetAsync(id);
+
             if (attributeDefinition == null)
             {
                 return NotFound();
             }
+
             return Ok(attributeDefinition.ToAttributeDefinitionDto());
         }
 
         [HttpPost]
-        public IActionResult CreateAttributeDefinition([FromBody] CreateAttributeDefinitionDto createDto)
+        public async Task<IActionResult> CreateAttributeDefinition([FromBody] CreateAttributeDefinitionDto createDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var attributeDefinition = createDto.ToAttributeDefinition();
+            var attributeDefinition = await _attributeDefinitionRepository.CreateAsync(createDto.ToAttributeDefinition());
 
-            _context.AttributeDefinitions.Add(attributeDefinition);
-            _context.SaveChanges();
             return CreatedAtAction(nameof(GetAttributeDefinition), new { id = attributeDefinition.Id }, attributeDefinition.ToAttributeDefinitionDto());
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateAttributeDefinition(int id, [FromBody] UpdateAttributeDefinitionDto updateDto)
+        public async Task<IActionResult> UpdateAttributeDefinition(int id, [FromBody] UpdateAttributeDefinitionDto updateDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var attributeDefinition = _context.AttributeDefinitions.Find(id);
+            var attributeDefinition = await _attributeDefinitionRepository.UpdateAsync(id, updateDto.ToAttributeDefinition());
+
             if (attributeDefinition == null)
             {
                 return NotFound();
             }
-            attributeDefinition.Name = updateDto.Name;
-            attributeDefinition.Type = updateDto.Type;
-            _context.SaveChanges();
+
             return CreatedAtAction(nameof(GetAttributeDefinition), new { id = attributeDefinition.Id }, attributeDefinition.ToAttributeDefinitionDto());
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteAttributeDefinition(int id)
+        public async Task<IActionResult> DeleteAttributeDefinition(int id)
         {
-            var attributeDefinition = _context.AttributeDefinitions.Find(id);
+            var attributeDefinition = await _attributeDefinitionRepository.DeleteAsync(id);
+
             if (attributeDefinition == null)
             {
                 return NotFound();
             }
-            _context.AttributeDefinitions.Remove(attributeDefinition);
-            _context.SaveChanges();
+
             return NoContent();
         }
 

@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ProductCatalog.Data.Contexts;
 using ProductCatalog.DTOs.CategoryAttribute;
+using ProductCatalog.Interfaces.Repositories;
 using ProductCatalog.Mappers;
 
 namespace ProductCatalog.Controllers
@@ -10,82 +9,72 @@ namespace ProductCatalog.Controllers
     [ApiController]
     public class CategoryAttributeController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ICategoryAttributeRepository _categoryAttributeRepository;
 
-        public CategoryAttributeController(ApplicationDbContext context)
+        public CategoryAttributeController(ICategoryAttributeRepository categoryAttributeRepository)
         {
-            this._context = context;
+            this._categoryAttributeRepository = categoryAttributeRepository;
         }
 
         [HttpGet]
-        public IActionResult GetCategoryAttributes()
+        public async Task<IActionResult> GetCategoriesAttributes()
         {
-            var categoryAttributes = _context.CategoryAttributes
-                .Include(c => c.AttributeDefinition)
-                .Include(c => c.Category)
-                .Select(c => c.ToCategoryAttributeDto())
-                .ToList();
-            return Ok(categoryAttributes);
+            var categoriesAttributes = await _categoryAttributeRepository.GetAsync();
+            var categoriesAttributeDtos = categoriesAttributes.Select(c => c.ToCategoryAttributeDto()).ToList();
+            return Ok(categoriesAttributeDtos);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetCategoryAttribute(int id)
+        public async Task<IActionResult> GetCategoryAttributes(int id)
         {
-            var categoryAttribute = _context.CategoryAttributes
-                .Include(c => c.AttributeDefinition)
-                .Include(c => c.Category)
-                .FirstOrDefault(c => c.Id == id);
+            var categoryAttributes = await _categoryAttributeRepository.GetAsync(id);
 
-            if (categoryAttribute == null)
+            if (categoryAttributes == null)
             {
                 return NotFound();
             }
-            return Ok(categoryAttribute.ToCategoryAttributeDto());
+
+            return Ok(categoryAttributes.ToCategoryAttributeDto());
         }
 
         [HttpPost]
-        public IActionResult CreateCategoryAttribute([FromBody] CreateCategoryAttributeDto createDto)
+        public async Task<IActionResult> CreateCategoryAttributes([FromBody] CreateCategoryAttributesDto createDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var categoryAttribute = createDto.ToCategoryAttribute();
-            _context.CategoryAttributes.Add(categoryAttribute);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetCategoryAttribute), new { id = categoryAttribute.Id }, categoryAttribute.ToCategoryAttributeDto());
+            var categoryAttributes = createDto.ToCategoryAttributes();
+
+            await _categoryAttributeRepository.CreateAsync(categoryAttributes);
+            return RedirectToAction(nameof(GetCategoryAttributes), new { id = createDto.CategoryId });
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateCategoryAttribute(int id, [FromBody] UpdateCategoryAttributeDto updateDto)
+        public async Task<IActionResult> UpdateCategoryAttributes(int id, [FromBody] UpdateCategoryAttributesDto updateDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            var categoryAttribute = _context.CategoryAttributes.Find(id);
-            if (categoryAttribute == null)
-            {
-                return NotFound();
-            }
-            categoryAttribute.CategoryId = updateDto.CategoryId;
-            categoryAttribute.AttributeDefinitionId = updateDto.AttributeDefinitionId;
-            _context.CategoryAttributes.Update(categoryAttribute);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetCategoryAttribute), new { id = categoryAttribute.Id }, categoryAttribute.ToCategoryAttributeDto());
+
+            var categoryAttributes = updateDto.ToCategoryAttributes();
+
+            await _categoryAttributeRepository.UpdateAsync(categoryAttributes);
+            return RedirectToAction(nameof(GetCategoryAttributes), new { id = updateDto.CategoryId });
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteCategoryAttribute(int id)
+        public async Task<IActionResult> DeleteCategoryAttribute(int id)
         {
-            var categoryAttribute = _context.CategoryAttributes.Find(id);
+            var categoryAttribute = await _categoryAttributeRepository.DeleteAsync(id);
+
             if (categoryAttribute == null)
             {
                 return NotFound();
             }
-            _context.CategoryAttributes.Remove(categoryAttribute);
-            _context.SaveChanges();
+
             return NoContent();
         }
     }

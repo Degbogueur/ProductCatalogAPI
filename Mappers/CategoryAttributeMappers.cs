@@ -1,4 +1,5 @@
 ﻿using Humanizer;
+using ProductCatalog.DTOs.AttributeDefinition;
 using ProductCatalog.DTOs.CategoryAttribute;
 using ProductCatalog.Models;
 
@@ -6,24 +7,43 @@ namespace ProductCatalog.Mappers
 {
     public static class CategoryAttributeMappers
     {
-        public static CategoryAttributeDto ToCategoryAttributeDto(this CategoryAttribute categoryAttribute)
+        public static CategoryAttributeDto ToCategoryAttributeDto(this Category category)
         {
             return new CategoryAttributeDto
             {
-                Id = categoryAttribute.Id,
-                CategoryName = categoryAttribute.Category?.Name ?? string.Empty,
-                AttributeName = categoryAttribute.AttributeDefinition?.Name ?? string.Empty,
-                AttributeType = categoryAttribute.AttributeDefinition?.Type.Humanize() ?? string.Empty
+                CategoryId = category.Id,
+                CategoryName = category.Name,
+                Attributes = category.CategoryAttributes
+                    .Select(a => new AttributeDefinitionDto
+                    {
+                        Id = a.AttributeDefinition?.Id ?? default,
+                        Name = a.AttributeDefinition?.Name ?? string.Empty,
+                        Type = a.AttributeDefinition?.Type.Humanize() ?? string.Empty
+                    })
+                    .ToList()
             };
         }
 
-        public static CategoryAttribute ToCategoryAttribute(this CreateCategoryAttributeDto createCategoryAttributeDto)
+        public static List<CategoryAttribute> ToCategoryAttributes(this CreateCategoryAttributesDto createCategoryAttributeDto)
         {
-            return new CategoryAttribute
-            {
-                CategoryId = createCategoryAttributeDto.CategoryId,
-                AttributeDefinitionId = createCategoryAttributeDto.AttributeDefinitionId
-            };
+            return createCategoryAttributeDto.AttributeDefinitionIds
+                .Select(attributeId => new CategoryAttribute
+                {
+                    CategoryId = createCategoryAttributeDto.CategoryId,
+                    AttributeDefinitionId = attributeId
+                })
+                .ToList();
+        }
+
+        public static List<CategoryAttribute> ToCategoryAttributes(this UpdateCategoryAttributesDto updateCategoryAttributeDto)
+        {
+            return updateCategoryAttributeDto.AttributeDefinitionIds
+                .Select(attributeId => new CategoryAttribute
+                {
+                    CategoryId = updateCategoryAttributeDto.CategoryId,
+                    AttributeDefinitionId = attributeId
+                })
+                .ToList();
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ProductCatalog.Data.Contexts;
 using ProductCatalog.DTOs.Category;
+using ProductCatalog.Interfaces.Repositories;
 using ProductCatalog.Mappers;
 
 namespace ProductCatalog.Controllers
@@ -10,39 +9,36 @@ namespace ProductCatalog.Controllers
     [ApiController]
     public class CategoryController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ICategoryRepository _categoryRepository;
 
-        public CategoryController(ApplicationDbContext context)
+        public CategoryController(ICategoryRepository categoryRepository)
         {
-            this._context = context;
+            this._categoryRepository = categoryRepository;
         }
 
         [HttpGet]
-        public IActionResult GetCategories()
+        public async Task<IActionResult> GetCategories()
         {
-            var categories = _context.Categories
-                .Include(c => c.CategoryAttributes)
-                    .ThenInclude(ca => ca.AttributeDefinition)
-                .Select(c => c.ToCategoryDto()).ToList();
-            return Ok(categories);
+            var categories = await _categoryRepository.GetAsync();
+            var categorieDtos = categories.Select(c => c.ToCategoryDto()).ToList();
+            return Ok(categorieDtos);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetCategory(int id)
+        public async Task<IActionResult> GetCategory(int id)
         {
-            var category = _context.Categories
-                .Include(c => c.CategoryAttributes)
-                    .ThenInclude(ca => ca.AttributeDefinition)
-                .FirstOrDefault(c => c.Id == id);
+            var category = await _categoryRepository.GetAsync(id);
+
             if (category == null)
             {
                 return NotFound();
             }
+
             return Ok(category.ToCategoryDto());
         }
 
         [HttpPost]
-        public IActionResult CreateCategory([FromForm] CreateCategoryDto createDto)
+        public async Task<IActionResult> CreateCategory([FromForm] CreateCategoryDto createDto)
         {
             if (!ModelState.IsValid)
             {
@@ -52,60 +48,48 @@ namespace ProductCatalog.Controllers
             var category = createDto.ToCategory();
             if (createDto.Image != null)
             {
-                var filePath = Path.Combine("images", createDto.Image.FileName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    createDto.Image.CopyTo(stream);
-                }
-                category.ImageUrl = filePath;
+                category.ImageUrl = /*_fileService.UploadProductImageFile(updateDto.Image);*/ null;
             }
 
-            _context.Categories.Add(category);
-            _context.SaveChanges();
+            category = await _categoryRepository.CreateAsync(category);
             return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category.ToCategoryDto());
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateCategory(int id, [FromForm] UpdateCategoryDto updateDto)
+        public async Task<IActionResult> UpdateCategory(int id, [FromForm] UpdateCategoryDto updateDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var category = _context.Categories.Find(id);
+            var category = updateDto.ToCategory();
+
+            if (updateDto.Image != null)
+            {
+                category.ImageUrl = null; // Clear the existing image URL if a new image is provided
+            }
+
+            category = await _categoryRepository.UpdateAsync(id, category);
+
             if (category == null)
             {
                 return NotFound();
             }
 
-            category.Name = updateDto.Name;
-            category.Description = updateDto.Description;
-            if (updateDto.Image != null)
-            {
-                var filePath = Path.Combine("images", updateDto.Image.FileName);
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    updateDto.Image.CopyTo(stream);
-                }
-                category.ImageUrl = filePath;
-            }
-
-            _context.Categories.Update(category);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetCategory), new { id }, category);
+            return CreatedAtAction(nameof(GetCategory), new { id }, category.ToCategoryDto());
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteCategory(int id)
+        public async Task<IActionResult> DeleteCategory(int id)
         {
-            var category = _context.Categories.Find(id);
+            var category = await _categoryRepository.DeleteAsync(id);
+
             if (category == null)
             {
                 return NotFound();
             }
-            _context.Categories.Remove(category);
-            _context.SaveChanges();
+
             return NoContent();
         }
     }

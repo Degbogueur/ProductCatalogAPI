@@ -1,12 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
-using ProductCatalog.Data.Contexts;
 using ProductCatalog.DTOs.Product;
 using ProductCatalog.Interfaces.Repositories;
 using ProductCatalog.Mappers;
-using ProductCatalog.Models;
-using System.Threading.Tasks;
 
 namespace ProductCatalog.Controllers
 {
@@ -14,21 +9,19 @@ namespace ProductCatalog.Controllers
     [ApiController]
     public class ProductController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly IProductRepository _productRepository;
 
-        public ProductController(ApplicationDbContext context, IProductRepository productRepository)
+        public ProductController(IProductRepository productRepository)
         {
-            this._context = context;
             this._productRepository = productRepository;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetProducts()
         {
-            var productDtos = await _productRepository.GetAsync();
-            var products = productDtos.Select(p => p.ToProductDto()).ToList();
-            return Ok(products);
+            var products = await _productRepository.GetAsync();
+            var productDtos = products.Select(p => p.ToProductDto()).ToList();
+            return Ok(productDtos);
         }
 
         [HttpGet("{id}")]
@@ -84,7 +77,7 @@ namespace ProductCatalog.Controllers
                 return BadRequest(ModelState);
             }
 
-            var imageUrl = /*_fileService.UploadFile(updateDto.Image);*/ string.Empty;
+            var imageUrl = /*_fileService.UploadProductImageFile(updateDto.Image);*/ string.Empty;
 
             var product = await _productRepository.UpdateImageAsync(id, imageUrl);
 

@@ -24,5 +24,14 @@ namespace ProductCatalog.Mappers
                 Type = createAttributeDefinitionDto.Type
             };
         }
+
+        public static AttributeDefinition ToAttributeDefinition(this UpdateAttributeDefinitionDto updateAttributeDefinitionDto)
+        {
+            return new AttributeDefinition
+            {
+                Name = updateAttributeDefinitionDto.Name,
+                Type = updateAttributeDefinitionDto.Type
+            };
+        }
     }
 }

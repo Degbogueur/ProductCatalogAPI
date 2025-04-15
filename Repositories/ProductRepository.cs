@@ -13,7 +13,7 @@ namespace ProductCatalog.Repositories
             _context = context;
         }
 
-        public async Task<List<Product>> GetAsync()
+        public async Task<IEnumerable<Product>> GetAsync()
         {
             var products = await _context.Products
                 .Include(p => p.Category)
@@ -70,7 +70,7 @@ namespace ProductCatalog.Repositories
                     }
                 }
                 _context.Products.Update(existingProduct);
-                _context.SaveChanges();
+                await _context.SaveChangesAsync();
             }
 
             return existingProduct;

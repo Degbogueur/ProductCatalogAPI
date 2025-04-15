@@ -4,7 +4,7 @@ namespace ProductCatalog.Interfaces.Repositories
 {
     public interface IProductRepository
     {
-        Task<List<Product>> GetAsync();
+        Task<IEnumerable<Product>> GetAsync();
         Task<Product?> GetAsync(int id);
         Task<Product> CreateAsync(Product product);
         Task<Product?> UpdateAsync(int id, Product product);
